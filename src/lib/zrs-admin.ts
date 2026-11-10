@@ -132,3 +132,52 @@ export async function getApplicationDetail(applicationId: string) {
   }
   return { ...app, evidence_url: evidenceUrl };
 }
+
+
+const APPLICANT_COOKIE = "zrs_applicant_session";
+export async function createApplicantSession(applicantId: string, applicantOtp: string) {
+  const idHash = hash("zrs-applicant-id:" + applicantId.trim().toUpperCase());
+  const otpHash = hash("zrs-applicant-otp:" + applicantOtp.trim());
+  const codes = await db(`zrs_access_codes?code_id_hash=eq.${idHash}&code_type=eq.applicant&select=id,otp_hash,application_id,expires_at,max_uses,use_count,revoked_at&limit=1`);
+  const code = codes?.[0];
+  if (!code || !safeEqual(code.otp_hash || "", otpHash) || code.revoked_at ||
+      new Date(code.expires_at).getTime() <= Date.now() || Number(code.use_count) >= Number(code.max_uses)) return false;
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+  await db("zrs_applicant_sessions", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ access_code_id: code.id, session_token_hash: hash(token), expires_at: expiresAt }),
+  });
+  await db(`zrs_access_codes?id=eq.${code.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ use_count: Number(code.use_count) + 1 }),
+  });
+  const jar = await cookies();
+  jar.set(APPLICANT_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", expires: new Date(expiresAt) });
+  return true;
+}
+export async function getApplicantDashboard() {
+  const jar = await cookies();
+  const token = jar.get(APPLICANT_COOKIE)?.value;
+  if (!token) return null;
+  const sessions = await db(`zrs_applicant_sessions?session_token_hash=eq.${hash(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id,access_code_id&limit=1`);
+  const session = sessions?.[0];
+  if (!session) return null;
+  const codes = await db(`zrs_access_codes?id=eq.${session.access_code_id}&code_type=eq.applicant&select=id,application_id,expires_at,revoked_at&limit=1`);
+  const code = codes?.[0];
+  if (!code || code.revoked_at || new Date(code.expires_at).getTime() <= Date.now()) return null;
+  const apps = await db(`zrs_applications?id=eq.${code.application_id}&select=full_name,nickname,country,tiktok_username,status,reviewer_note,created_at,updated_at,reviewed_at&limit=1`);
+  const app = apps?.[0];
+  if (!app) return null;
+  await db(`zrs_applicant_sessions?id=eq.${session.id}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ last_seen_at: new Date().toISOString() }),
+  });
+  return app;
+}
+export async function destroyApplicantSession() {
+  const jar = await cookies();
+  const token = jar.get(APPLICANT_COOKIE)?.value;
+  if (token) await db(`zrs_applicant_sessions?session_token_hash=eq.${hash(token)}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  jar.set(APPLICANT_COOKIE, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: 0 });
+}
