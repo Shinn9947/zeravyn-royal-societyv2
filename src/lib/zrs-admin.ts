@@ -30,7 +30,7 @@ async function db(path: string, init: RequestInit = {}) {
   return body ? JSON.parse(body) : null;
 }
 export async function consumeLoginAttempt(request: Request, scope: "owner" | "applicant", limit: number) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim();
   const ip = request.headers.get("x-real-ip") || forwarded || "unknown";
   const rateKey = hash("zrs-login:" + scope + ":" + ip);
   const result = await db("rpc/zrs_consume_login_attempt", {
