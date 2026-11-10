@@ -5,7 +5,8 @@ import { Crown, LogOut, ClipboardCheck, Clock3, CheckCircle2, XCircle, RefreshCw
 type Application = { full_name:string; nickname:string; country:string; tiktok_username:string; status:string; reviewer_note:string|null; created_at:string; updated_at:string; reviewed_at:string|null };
 const steps = [
   { key:"pending", title:"Pengajuan diterima", text:"Data pendaftaran sudah masuk dan menunggu pemeriksaan tim ZRS." },
-  { key:"review", title:"Sedang ditinjau", text:"Tim ZRS sedang memeriksa data dan bukti pendaftaran." },\n  { key:"revision", title:"Memerlukan revisi", text:"Tim ZRS meminta perbaikan atau informasi tambahan. Baca catatan admin di bawah." },
+  { key:"review", title:"Sedang ditinjau", text:"Tim ZRS sedang memeriksa data dan bukti pendaftaran." },
+  { key:"revision", title:"Memerlukan revisi", text:"Tim ZRS meminta perbaikan atau informasi tambahan. Baca catatan admin di bawah." },
   { key:"approved", title:"Pendaftaran disetujui", text:"Selamat! Pendaftaran kamu diterima menjadi anggota ZRS." },
   { key:"rejected", title:"Pendaftaran belum disetujui", text:"Pengajuan belum dapat diterima. Baca catatan admin jika tersedia." },
 ];
