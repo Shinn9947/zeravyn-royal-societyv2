@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { applicationId, status, reviewerNote } = body || {};
-    if (!["review", "approved", "rejected"].includes(status)) {
+    if (!["review", "revision", "approved", "rejected"].includes(status)) {
       return NextResponse.json({ error: "Status tidak valid." }, { status: 400 });
     }
     await updateApplicationStatus(applicationId, status, typeof reviewerNote === "string" ? reviewerNote : null);
