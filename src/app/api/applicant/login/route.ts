@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const id = String(body?.id || "").trim();
     const otp = String(body?.otp || "").trim();
-    if (!/^ZRSA-[A-HJ-NP-Z2-9]{8}$/i.test(id) || !/^\\d{6}$/.test(otp)) {
+    if (!/^ZRSA-[A-HJ-NP-Z2-9]{8}$/i.test(id) || !/^\d{6}$/.test(otp)) {
       return NextResponse.json({ error: "Periksa kembali ID dan OTP." }, { status: 400 });
     }
     const ok = await createApplicantSession(id, otp);
