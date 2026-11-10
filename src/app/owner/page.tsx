@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 
 type Overview = { applications: any[]; members: any[]; counts: Record<string, number> };
+type ActionStatus = "review" | "approved" | "rejected";
+
 export default function OwnerPage() {
   const [id, setId] = useState("");
   const [otp, setOtp] = useState("");
@@ -10,6 +12,8 @@ export default function OwnerPage() {
   const [logged, setLogged] = useState(false);
   const [data, setData] = useState<Overview | null>(null);
   const [tab, setTab] = useState<"applications" | "members">("applications");
+  const [actionId, setActionId] = useState("");
+  const [notice, setNotice] = useState("");
 
   async function load() {
     const res = await fetch("/api/owner/overview", { cache: "no-store" });
@@ -32,6 +36,24 @@ export default function OwnerPage() {
     await fetch("/api/owner/logout", { method: "POST" });
     setLogged(false); setData(null);
   }
+  async function changeStatus(applicationId: string, status: ActionStatus) {
+    const label = status === "review" ? "memproses" : status === "approved" ? "menyetujui" : "menolak";
+    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
+    setActionId(applicationId); setNotice("");
+    try {
+      const res = await fetch("/api/owner/applications/action", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId, status })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Aksi gagal.");
+      setNotice(status === "review" ? "Pendaftaran dipindahkan ke tahap review." : status === "approved" ? "Pendaftaran disetujui dan member berhasil dibuat." : "Pendaftaran ditolak.");
+      await load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Terjadi kesalahan.");
+    } finally { setActionId(""); }
+  }
+
   const gold = "#d8b66a";
   const shell: React.CSSProperties = { minHeight:"100vh", background:"radial-gradient(ellipse at top,#292115 0%,#0b0b0b 55%)", color:"#f5f0e6", fontFamily:"Arial,sans-serif", padding:"28px 18px" };
   const card: React.CSSProperties = { background:"rgba(25,24,21,.92)", border:"1px solid #5e4a27", borderRadius:16, padding:20, boxShadow:"0 12px 36px #0008" };
@@ -66,7 +88,16 @@ export default function OwnerPage() {
           <button onClick={()=>setTab("members")} style={tabStyle(tab==="members",gold)}>Members</button>
           <button onClick={load} style={{...tabStyle(false,gold),marginLeft:"auto"}}>Refresh</button>
         </div>
-        {tab==="applications" ? <div style={{overflowX:"auto"}}><table style={tableStyle}><thead><tr>{["Applicant","TikTok","Followers","Status","Submitted"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.applications||[]).map(a=><tr key={a.id}><td style={tdStyle}><b>{a.full_name}</b><br/><small style={{color:"#aaa"}}>{a.nickname} · {a.country}</small></td><td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{a.follower_count}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td></tr>)}</tbody></table>{!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}</div> :
+        {notice && <p role="status" style={{padding:12,border:"1px solid #75613a",borderRadius:8,color:gold,fontSize:13,marginBottom:16}}>{notice}</p>}
+        {tab==="applications" ? <div style={{overflowX:"auto"}}><table style={{...tableStyle,minWidth:850}}><thead><tr>{["Applicant","TikTok","Followers","Status","Submitted","Actions"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.applications||[]).map(a=><tr key={a.id}>
+          <td style={tdStyle}><b>{a.full_name}</b><br/><small style={{color:"#aaa"}}>{a.nickname} · {a.country}</small></td>
+          <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{a.follower_count}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
+          <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}>
+            <button disabled={!!actionId || a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>{actionId===a.id?"...":"Proses"}</button>
+            <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
+            <button disabled={!!actionId || a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button>
+          </div></td>
+        </tr>)}</tbody></table>{!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}</div> :
         <div style={{overflowX:"auto"}}><table style={tableStyle}><thead><tr>{["Member","TikTok","Member No.","Status","Joined"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.members||[]).map(m=><tr key={m.id}><td style={tdStyle}>{m.full_name}<br/><small style={{color:"#aaa"}}>{m.nickname}</small></td><td style={tdStyle}>@{m.tiktok_username}</td><td style={tdStyle}>{m.member_number||"—"}</td><td style={tdStyle}>{m.status}</td><td style={tdStyle}>{m.joined_at?new Date(m.joined_at).toLocaleDateString("id-ID"):"—"}</td></tr>)}</tbody></table>{!data?.members?.length&&<p style={{color:"#999"}}>Belum ada member.</p>}</div>}
       </div>
       <p style={{color:"#777",fontSize:11,textAlign:"center",marginTop:18}}>ZRS SECURE OWNER SESSION · DATA DITAMPILKAN DARI DATABASE</p>
@@ -75,6 +106,7 @@ export default function OwnerPage() {
 }
 const inputStyle: React.CSSProperties = {width:"100%",boxSizing:"border-box",padding:14,background:"#101010",border:"1px solid #55482e",borderRadius:8,color:"#fff",outline:"none"};
 function tabStyle(active:boolean,gold:string):React.CSSProperties{return {padding:"10px 14px",borderRadius:8,border:"1px solid #5e4a27",background:active?"#d8b66a":"#151515",color:active?"#17130b":gold,fontWeight:700};}
+function actionStyle(color:string):React.CSSProperties{return {padding:"8px 10px",borderRadius:7,border:"1px solid "+color,background:"transparent",color,fontSize:12,fontWeight:700,cursor:"pointer"};}
 const tableStyle:React.CSSProperties={width:"100%",borderCollapse:"collapse",minWidth:620};
 const thStyle:React.CSSProperties={textAlign:"left",padding:12,color:"#cdb77d",fontSize:12,borderBottom:"1px solid #55482e"};
-const tdStyle:React.CSSProperties={padding:12,fontSize:13,borderBottom:"1px solid #34302a"};
+const tdStyle:React.CSSProperties={padding:12,fontSize:13,borderBottom:"1px solid #34302a",verticalAlign:"middle"};
