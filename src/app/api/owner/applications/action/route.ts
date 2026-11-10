@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOwnerSession, updateApplicationStatus } from "../../../../lib/zrs-admin";
+import { getOwnerSession, updateApplicationStatus } from "../../../../../lib/zrs-admin";
 
 export const runtime = "nodejs";
 
