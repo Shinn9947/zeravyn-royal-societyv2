@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 type Overview = { applications: any[]; members: any[]; counts: Record<string, number> };
-type ActionStatus = "review" | "approved" | "rejected";
+type ActionStatus = "review" | "revision" | "approved" | "rejected";
 
 export default function OwnerPage() {
   const [id, setId] = useState("");
@@ -45,17 +45,17 @@ export default function OwnerPage() {
     setLogged(false); setData(null);
   }
   async function changeStatus(applicationId: string, status: ActionStatus) {
-    const label = status === "review" ? "memproses" : status === "approved" ? "menyetujui" : "menolak";
-    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
+    const label = status === "review" ? "memproses" : status === "revision" ? "meminta revisi" : status === "approved" ? "menyetujui" : "menolak";
+    const reviewerNote = status === "revision" ? (window.prompt("Tuliskan catatan revisi untuk pendaftar:", "") || "") : "";\n    if (status === "revision" && !reviewerNote.trim()) { setNotice("Catatan revisi wajib diisi."); return; }\n    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
     setActionId(applicationId); setNotice("");
     try {
       const res = await fetch("/api/owner/applications/action", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId, status })
+        body: JSON.stringify({ applicationId, status, reviewerNote })
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Aksi gagal.");
-      setNotice(status === "review" ? "Pendaftaran dipindahkan ke tahap review." : status === "approved" ? "Pendaftaran disetujui dan member berhasil dibuat." : "Pendaftaran ditolak.");
+      setNotice(status === "review" ? "Pendaftaran dipindahkan ke tahap review." : status === "revision" ? "Catatan revisi berhasil dikirim." : status === "approved" ? "Pendaftaran disetujui dan member berhasil dibuat." : "Pendaftaran ditolak.");
       await load();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "Terjadi kesalahan.");
@@ -103,14 +103,14 @@ export default function OwnerPage() {
           <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{Number(a.follower_count||0).toLocaleString("id-ID")}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
           <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button>
             <button disabled={!!actionId || a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>{actionId===a.id?"...":"Proses"}</button>
-            <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
+            <button disabled={!!actionId || a.status==="revision"} onClick={()=>changeStatus(a.id,"revision")} style={actionStyle("#d49b55")}>Revisi</button>\n            <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
             <button disabled={!!actionId || a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button>
           </div></td>
         </tr>)}</tbody></table></div>
         <div className="ownerApplicationsMobile">{(data?.applications||[]).map(a=><article key={a.id} className="ownerApplicantCard">
           <div className="ownerApplicantTop"><div><b>{a.full_name||"Nama belum tersedia"}</b><small>{a.nickname||"—"} · {a.country||"—"}</small></div><span className="ownerStatus">{a.status}</span></div>
           <div className="ownerApplicantMeta"><span>TikTok <b>@{a.tiktok_username||"—"}</b></span><span>Followers <b>{Number(a.follower_count||0).toLocaleString("id-ID")}</b></span><span>Dikirim <b>{new Date(a.created_at).toLocaleDateString("id-ID")}</b></span></div>
-          <div className="ownerApplicantActions"><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button><button disabled={!!actionId||a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>Proses</button><button disabled={!!actionId||a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button><button disabled={!!actionId||a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button></div>
+          <div className="ownerApplicantActions"><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button><button disabled={!!actionId||a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>Proses</button><button disabled={!!actionId||a.status==="revision"} onClick={()=>changeStatus(a.id,"revision")} style={actionStyle("#d49b55")}>Revisi</button><button disabled={!!actionId||a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button><button disabled={!!actionId||a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button></div>
         </article>)}</div>
         {!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}
         </> :
