@@ -86,26 +86,16 @@ export async function destroyOwnerSession() {
   jar.set(COOKIE, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: 0 });
 }
 export async function getOverview() {
-  const [applications, members] = await Promise.all([
-    db("zrs_applications?select=id,full_name,nickname,age,gender,country,tiktok_username,tiktok_profile_url,follower_count,reason,status,reviewer_note,submitted_via,created_at, screenshot_path&order=created_at.desc&limit=100"),
+  const [applications, members, counts] = await Promise.all([
+    db("zrs_applications?select=id,full_name,nickname,age,gender,country,tiktok_username,tiktok_profile_url,follower_count,reason,status,reviewer_note,submitted_via,created_at,screenshot_path&order=created_at.desc&limit=100"),
     db("zrs_members?select=id,full_name,nickname,tiktok_username,member_number,status,joined_at&order=joined_at.desc&limit=100"),
+    db("rpc/zrs_owner_overview_counts", { method: "POST", body: "{}" }),
   ]);
-  return {
-    applications: applications || [],
-    members: members || [],
-    counts: {
-      total: (applications || []).length,
-      pending: (applications || []).filter((x: any) => x.status === "pending").length,
-      review: (applications || []).filter((x: any) => x.status === "review").length,
-      approved: (applications || []).filter((x: any) => x.status === "approved").length,
-      rejected: (applications || []).filter((x: any) => x.status === "rejected").length,
-      members: (members || []).length,
-    },
-  };
+  return { applications: applications || [], members: members || [], counts: counts || {} };
 }
 
 
-export async function updateApplicationStatus(applicationId: string, status: "review" | "approved" | "rejected", reviewerNote: string | null = null) {
+export async function updateApplicationStatus(applicationId: string, status: "review" | "revision" | "approved" | "rejected", reviewerNote: string | null = null) {
   if (!/^[0-9a-f-]{36}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
   return db("rpc/zrs_owner_update_application", {
     method: "POST",
@@ -138,20 +128,18 @@ const APPLICANT_COOKIE = "zrs_applicant_session";
 export async function createApplicantSession(applicantId: string, applicantOtp: string) {
   const idHash = hash("zrs-applicant-id:" + applicantId.trim().toUpperCase());
   const otpHash = hash("zrs-applicant-otp:" + applicantOtp.trim());
-  const codes = await db(`zrs_access_codes?code_id_hash=eq.${idHash}&code_type=eq.applicant&select=id,otp_hash,application_id,expires_at,max_uses,use_count,revoked_at&limit=1`);
-  const code = codes?.[0];
-  if (!code || !safeEqual(code.otp_hash || "", otpHash) || code.revoked_at ||
-      new Date(code.expires_at).getTime() <= Date.now() || Number(code.use_count) >= Number(code.max_uses)) return false;
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
-  await db("zrs_applicant_sessions", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ access_code_id: code.id, session_token_hash: hash(token), expires_at: expiresAt }),
+  const result = await db("rpc/zrs_create_applicant_session", {
+    method: "POST",
+    body: JSON.stringify({
+      p_code_id_hash: idHash,
+      p_otp_hash: otpHash,
+      p_session_token_hash: hash(token),
+      p_expires_at: expiresAt,
+    }),
   });
-  await db(`zrs_access_codes?id=eq.${code.id}`, {
-    method: "PATCH", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ use_count: Number(code.use_count) + 1 }),
-  });
+  if (result !== true) return false;
   const jar = await cookies();
   jar.set(APPLICANT_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", expires: new Date(expiresAt) });
   return true;
