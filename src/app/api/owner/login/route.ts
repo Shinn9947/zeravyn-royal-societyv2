@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createOwnerSession } from "@/lib/zrs-admin";
+import { createOwnerSession } from "../../../../lib/zrs-admin";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
