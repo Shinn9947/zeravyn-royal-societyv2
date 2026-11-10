@@ -69,7 +69,9 @@ export default function Home() {
       const response = await fetch("https://eqrcwyzmnwmayuwzuoae.supabase.co/functions/v1/zrs-submit-application", { method: "POST", body });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || result.message || "Pengajuan gagal dikirim. Coba lagi.");
-      setNotice("Pengajuan berhasil dikirim! Simpan informasi yang diberikan admin ZRS untuk memantau status seleksi.");
+      if (typeof result.applicant_id !== "string" || typeof result.applicant_otp !== "string") throw new Error("Pengajuan tersimpan, tetapi ID dan OTP belum diterima. Hubungi admin ZRS.");
+      setIssuedCredentials({ id: result.applicant_id, otp: result.applicant_otp });
+      setNotice("Pengajuan berhasil dikirim! Simpan Applicant ID dan OTP untuk memantau status seleksi.");
       setFile(null); setConfirmed(false); setTurnstileToken("");
     } catch (err) { setNotice(err instanceof Error ? err.message : "Terjadi kesalahan saat mengirim pengajuan."); }
     finally { setSubmitting(false); }
