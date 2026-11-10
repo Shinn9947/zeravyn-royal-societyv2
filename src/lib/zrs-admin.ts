@@ -103,3 +103,12 @@ export async function getOverview() {
     },
   };
 }
+
+
+export async function updateApplicationStatus(applicationId: string, status: "review" | "approved" | "rejected", reviewerNote: string | null = null) {
+  if (!/^[0-9a-f-]{36}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
+  return db("rpc/zrs_owner_update_application", {
+    method: "POST",
+    body: JSON.stringify({ p_application_id: applicationId, p_status: status, p_reviewer_note: reviewerNote }),
+  });
+}
