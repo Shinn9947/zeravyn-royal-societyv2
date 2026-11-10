@@ -97,15 +97,23 @@ export default function OwnerPage() {
           <button onClick={load} style={{...tabStyle(false,gold),marginLeft:"auto"}}>Refresh</button>
         </div>
         {notice && <p role="status" style={{padding:12,border:"1px solid #75613a",borderRadius:8,color:gold,fontSize:13,marginBottom:16}}>{notice}</p>}
-        {tab==="applications" ? <div style={{overflowX:"auto"}}><table style={{...tableStyle,minWidth:850}}><thead><tr>{["Applicant","TikTok","Followers","Status","Submitted","Actions"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.applications||[]).map(a=><tr key={a.id}>
+        {tab==="applications" ? <>
+        <div className="ownerApplicationsDesktop" style={{overflowX:"auto"}}><table style={{...tableStyle,minWidth:850}}><thead><tr>{["Applicant","TikTok","Followers","Status","Submitted","Actions"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.applications||[]).map(a=><tr key={a.id}>
           <td style={tdStyle}><b>{a.full_name}</b><br/><small style={{color:"#aaa"}}>{a.nickname} · {a.country}</small></td>
-          <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{a.follower_count}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
+          <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{Number(a.follower_count||0).toLocaleString("id-ID")}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
           <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button>
             <button disabled={!!actionId || a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>{actionId===a.id?"...":"Proses"}</button>
             <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
             <button disabled={!!actionId || a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button>
           </div></td>
-        </tr>)}</tbody></table>{!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}</div> :
+        </tr>)}</tbody></table></div>
+        <div className="ownerApplicationsMobile">{(data?.applications||[]).map(a=><article key={a.id} className="ownerApplicantCard">
+          <div className="ownerApplicantTop"><div><b>{a.full_name||"Nama belum tersedia"}</b><small>{a.nickname||"—"} · {a.country||"—"}</small></div><span className="ownerStatus">{a.status}</span></div>
+          <div className="ownerApplicantMeta"><span>TikTok <b>@{a.tiktok_username||"—"}</b></span><span>Followers <b>{Number(a.follower_count||0).toLocaleString("id-ID")}</b></span><span>Dikirim <b>{new Date(a.created_at).toLocaleDateString("id-ID")}</b></span></div>
+          <div className="ownerApplicantActions"><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button><button disabled={!!actionId||a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>Proses</button><button disabled={!!actionId||a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button><button disabled={!!actionId||a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button></div>
+        </article>)}</div>
+        {!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}
+        </> :
         <div style={{overflowX:"auto"}}><table style={tableStyle}><thead><tr>{["Member","TikTok","Member No.","Status","Joined"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.members||[]).map(m=><tr key={m.id}><td style={tdStyle}>{m.full_name}<br/><small style={{color:"#aaa"}}>{m.nickname}</small></td><td style={tdStyle}>@{m.tiktok_username}</td><td style={tdStyle}>{m.member_number||"—"}</td><td style={tdStyle}>{m.status}</td><td style={tdStyle}>{m.joined_at?new Date(m.joined_at).toLocaleDateString("id-ID"):"—"}</td></tr>)}</tbody></table>{!data?.members?.length&&<p style={{color:"#999"}}>Belum ada member.</p>}</div>}
       </div>
       {detailBusy&&<p style={{color:gold}}>Memuat detail pendaftar...</p>}
