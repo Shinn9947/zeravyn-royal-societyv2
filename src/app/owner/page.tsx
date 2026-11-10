@@ -46,7 +46,8 @@ export default function OwnerPage() {
   }
   async function changeStatus(applicationId: string, status: ActionStatus) {
     const label = status === "review" ? "memproses" : status === "revision" ? "meminta revisi" : status === "approved" ? "menyetujui" : "menolak";
-    const reviewerNote = status === "revision" ? (window.prompt("Tuliskan catatan revisi untuk pendaftar:", "") || "") : "";\n    if (status === "revision" && !reviewerNote.trim()) { setNotice("Catatan revisi wajib diisi."); return; }\n    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
+    const reviewerNote = status === "revision" ? (window.prompt("Tuliskan catatan revisi untuk pendaftar:", "") || "") : "";
+    if (status === "revision" && !reviewerNote.trim()) { setNotice("Catatan revisi wajib diisi."); return; }\n    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
     setActionId(applicationId); setNotice("");
     try {
       const res = await fetch("/api/owner/applications/action", {
@@ -103,7 +104,8 @@ export default function OwnerPage() {
           <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{Number(a.follower_count||0).toLocaleString("id-ID")}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
           <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button>
             <button disabled={!!actionId || a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>{actionId===a.id?"...":"Proses"}</button>
-            <button disabled={!!actionId || a.status==="revision"} onClick={()=>changeStatus(a.id,"revision")} style={actionStyle("#d49b55")}>Revisi</button>\n            <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
+            <button disabled={!!actionId || a.status==="revision"} onClick={()=>changeStatus(a.id,"revision")} style={actionStyle("#d49b55")}>Revisi</button>
+            <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
             <button disabled={!!actionId || a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button>
           </div></td>
         </tr>)}</tbody></table></div>
