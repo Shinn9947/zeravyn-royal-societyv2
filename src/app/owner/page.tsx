@@ -47,7 +47,8 @@ export default function OwnerPage() {
   async function changeStatus(applicationId: string, status: ActionStatus) {
     const label = status === "review" ? "memproses" : status === "revision" ? "meminta revisi" : status === "approved" ? "menyetujui" : "menolak";
     const reviewerNote = status === "revision" ? (window.prompt("Tuliskan catatan revisi untuk pendaftar:", "") || "") : "";
-    if (status === "revision" && !reviewerNote.trim()) { setNotice("Catatan revisi wajib diisi."); return; }\n    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
+    if (status === "revision" && !reviewerNote.trim()) { setNotice("Catatan revisi wajib diisi."); return; }
+    if (!window.confirm(`Yakin ingin ${label} pendaftaran ini?${status === "approved" ? "\\nPendaftar akan otomatis dibuat menjadi member aktif." : ""}`)) return;
     setActionId(applicationId); setNotice("");
     try {
       const res = await fetch("/api/owner/applications/action", {
