@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+declare global { interface Window { turnstile?: { render: (el: HTMLElement, options: Record<string, unknown>) => string; remove: (id: string) => void }; } }
 import { Crown, ShieldCheck, Users, Copy, Check, ArrowRight, Menu, X, UploadCloud } from "lucide-react";
 
 const cnOptions = [
@@ -25,17 +27,51 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [data, setData] = useState({name:"",nick:"",age:"",gender:"",country:"Indonesia",username:"",url:"",followers:"",reason:""});
   const [confirmed, setConfirmed] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
   const update = (key:string,value:string) => setData(old => ({...old,[key]:value}));
+  useEffect(() => {
+    if (step !== 3 || !siteKey) return;
+    let widgetId = "";
+    const mount = () => {
+      const el = document.getElementById("zrs-turnstile");
+      if (el && window.turnstile && !widgetId) widgetId = window.turnstile.render(el, { sitekey: siteKey, callback: (token: string) => setTurnstileToken(token), "expired-callback": () => setTurnstileToken(""), "error-callback": () => setTurnstileToken("") });
+    };
+    if (window.turnstile) mount();
+    else {
+      const existing = document.querySelector<HTMLScriptElement>('script[data-zrs-turnstile]');
+      if (existing) existing.addEventListener("load", mount);
+      else { const script = document.createElement("script"); script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; script.async = true; script.defer = true; script.dataset.zrsTurnstile = "true"; script.onload = mount; document.head.appendChild(script); }
+    }
+    return () => { if (widgetId && window.turnstile) window.turnstile.remove(widgetId); setTurnstileToken(""); };
+  }, [step, siteKey]);
   const next = () => {
     if (step===1 && (!data.name || !data.nick || Number(data.age)<13 || !data.gender)) return setNotice("Lengkapi data pribadi. Usia minimum 13 tahun.");
     if (step===2 && (!data.username || !data.url || !data.followers || !data.reason)) return setNotice("Lengkapi seluruh informasi TikTok.");
     setNotice(""); setStep(s=>Math.min(3,s+1));
   };
-  const submit = (e:React.FormEvent) => {
+  const submit = async (e:React.FormEvent) => {
     e.preventDefault();
     if (!file || !confirmed) return setNotice("Unggah screenshot dan centang konfirmasi identitas.");
     if (file.size>5*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(file.type)) return setNotice("Gunakan PNG, JPG, atau WEBP maksimal 5 MB.");
-    setNotice("Formulir tervalidasi pada tampilan ini. Pengiriman database akan aktif setelah integrasi backend.");
+    if (!siteKey) return setNotice("Verifikasi keamanan belum dikonfigurasi. Silakan hubungi admin ZRS.");
+    if (!turnstileToken) return setNotice("Selesaikan verifikasi keamanan terlebih dahulu.");
+    setSubmitting(true); setNotice("");
+    try {
+      const body = new FormData();
+      body.append("full_name", data.name); body.append("nickname", data.nick); body.append("age", data.age);
+      body.append("gender", data.gender); body.append("country", data.country); body.append("tiktok_username", data.username);
+      body.append("tiktok_profile_url", data.url); body.append("follower_count", data.followers); body.append("reason", data.reason);
+      body.append("identity_confirmed", String(confirmed)); body.append("screenshot", file); body.append("turnstile_token", turnstileToken);
+      body.append("website", "");
+      const response = await fetch("https://eqrcwyzmnwmayuwzuoae.supabase.co/functions/v1/zrs-submit-application", { method: "POST", body });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || result.message || "Pengajuan gagal dikirim. Coba lagi.");
+      setNotice("Pengajuan berhasil dikirim! Simpan informasi yang diberikan admin ZRS untuk memantau status seleksi.");
+      setFile(null); setConfirmed(false); setTurnstileToken("");
+    } catch (err) { setNotice(err instanceof Error ? err.message : "Terjadi kesalahan saat mengirim pengajuan."); }
+    finally { setSubmitting(false); }
   };
   const Input = ({label,value,onChange,placeholder,type="text"}:{label:string;value:string;onChange:(v:string)=>void;placeholder:string;type?:string}) => <div className="field"><label>{label}</label><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></div>;
   return <>
@@ -49,8 +85,8 @@ export default function Home() {
       <section className="section apply" id="apply"><div className="sectionTitle centered"><span>05 — YOUR JOURNEY STARTS HERE</span><h2>Member <em>Application</em></h2><p>Isi data dengan teliti dan pastikan sesuai akun kamu.</p></div><div className="formShell"><div className="formHead"><div><span>APPLICATION FORM</span><h3>Join the Royal Family</h3></div><div className="stepCount">STEP {step} <small>/ 3</small></div></div><div className="progress"><i style={{width:`${step*33.333}%`}}/></div><form onSubmit={submit}>
       {step===1&&<div className="formGrid"><Input label="Full Name" value={data.name} onChange={v=>update("name",v)} placeholder="Nama lengkap"/><Input label="Nickname" value={data.nick} onChange={v=>update("nick",v)} placeholder="Nama panggilan"/><Input label="Age" value={data.age} onChange={v=>update("age",v)} placeholder="Minimal 13 tahun" type="number"/><div className="field"><label>Gender</label><select value={data.gender} onChange={e=>update("gender",e.target.value)}><option value="">Pilih gender</option><option>Laki-laki</option><option>Perempuan</option></select></div><Input label="Country" value={data.country} onChange={v=>update("country",v)} placeholder="Negara"/></div>}
       {step===2&&<div className="formGrid"><Input label="TikTok Username" value={data.username} onChange={v=>update("username",v)} placeholder="@username"/><Input label="TikTok Profile URL" value={data.url} onChange={v=>update("url",v)} placeholder="https://tiktok.com/@username"/><Input label="Follower Count" value={data.followers} onChange={v=>update("followers",v)} placeholder="Jumlah followers" type="number"/><div className="field full"><label>WHY DO YOU WANT TO JOIN ZRS?</label><textarea rows={4} value={data.reason} onChange={e=>update("reason",e.target.value)} placeholder="Ceritakan alasan kamu..."/></div></div>}
-      {step===3&&<div className="formGrid"><div className="field full"><label>SCREENSHOT EVIDENCE (MAX 5 MB)</label><label className="uploadBox"><UploadCloud size={28}/><b>{file?file.name:"Upload screenshot bukti akun"}</b><small>PNG, JPG, atau WEBP · Maksimal 5 MB</small><input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setFile(e.target.files?.[0]||null)}/></label></div><label className="confirm full"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Saya mengonfirmasi bahwa akun saya telah menggunakan identitas ZRS sesuai ketentuan.</label><p className="privacy full">Data pendaftaran dan bukti digunakan hanya untuk proses seleksi ZRS. Formulir ini belum terhubung ke database.</p></div>}
-      {notice&&<div className="notice">{notice}</div>}<div className="formActions">{step>1&&<button type="button" className="backBtn" onClick={()=>{setNotice("");setStep(s=>s-1)}}>BACK</button>}{step<3?<button type="button" className="primaryBtn" onClick={next}>CONTINUE <ArrowRight size={16}/></button>:<button type="submit" className="primaryBtn">SUBMIT APPLICATION <ArrowRight size={16}/></button>}</div></form></div></section>
+      {step===3&&<div className="formGrid"><div className="field full"><label>SCREENSHOT EVIDENCE (MAX 5 MB)</label><label className="uploadBox"><UploadCloud size={28}/><b>{file?file.name:"Upload screenshot bukti akun"}</b><small>PNG, JPG, atau WEBP · Maksimal 5 MB</small><input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setFile(e.target.files?.[0]||null)}/></label></div><label className="confirm full"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Saya mengonfirmasi bahwa akun saya telah menggunakan identitas ZRS sesuai ketentuan.</label><div className="full"><div id="zrs-turnstile"/>{!siteKey&&<p className="privacy">Verifikasi keamanan sedang disiapkan oleh admin ZRS.</p>}</div><p className="privacy full">Data pendaftaran dan bukti digunakan hanya untuk proses seleksi ZRS.</p></div>}
+      {notice&&<div className="notice">{notice}</div>}<div className="formActions">{step>1&&<button type="button" className="backBtn" onClick={()=>{setNotice("");setStep(s=>s-1)}}>BACK</button>}{step<3?<button type="button" className="primaryBtn" onClick={next}>CONTINUE <ArrowRight size={16}/></button>:<button type="submit" className="primaryBtn" disabled={submitting}>{submitting?"SENDING...":"SUBMIT APPLICATION"} <ArrowRight size={16}/></button>}</div></form></div></section>
     </main><footer><div className="footerBrand"><Crown/><b>ZERAVYN ROYAL SOCIETY</b></div><p>A LEGACY BEYOND ORDINARY</p><small>© 2026 ZERAVYN ROYAL SOCIETY. ALL RIGHTS RESERVED.</small></footer>
   </>;
 }
