@@ -83,7 +83,7 @@ export default function OwnerPage() {
 
   return <main style={shell}>
     <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,maxWidth:1100,margin:"0 auto 28px"}}>
-      <div><p style={{color:gold,letterSpacing:3,fontSize:11}}>♛ ZERAVYN ROYAL SOCIETY</p><h1 style={{fontFamily:"Georgia,serif",fontWeight:500,margin:"5px 0"}}>Owner Dashboard</h1><small style={{color:"#999"}}>Private administration panel</small></div>
+      <div><a href="/" className="ownerBackHome">← Website Utama</a><p style={{color:gold,letterSpacing:3,fontSize:11,marginTop:14}}>♛ ZERAVYN ROYAL SOCIETY</p><h1 style={{fontFamily:"Georgia,serif",fontWeight:500,margin:"5px 0"}}>Owner Dashboard</h1><small style={{color:"#999"}}>Private administration panel</small></div>
       <button onClick={logout} style={{background:"transparent",border:"1px solid #705c34",color:gold,padding:"10px 14px",borderRadius:8}}>Logout</button>
     </header>
     <section style={{maxWidth:1100,margin:"auto"}}>
