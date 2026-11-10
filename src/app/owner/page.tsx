@@ -14,6 +14,8 @@ export default function OwnerPage() {
   const [tab, setTab] = useState<"applications" | "members">("applications");
   const [actionId, setActionId] = useState("");
   const [notice, setNotice] = useState("");
+  const [detail, setDetail] = useState<any>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
 
   async function load() {
     const res = await fetch("/api/owner/overview", { cache: "no-store" });
@@ -31,6 +33,12 @@ export default function OwnerPage() {
       setId(""); setOtp(""); await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Terjadi kesalahan."); }
     finally { setBusy(false); }
+  }
+  async function showDetail(applicationId: string) {
+    setDetailBusy(true); setDetail(null);
+    try { const res = await fetch(`/api/owner/applications/detail?id=${encodeURIComponent(applicationId)}`, { cache: "no-store" }); const result = await res.json(); if (!res.ok) throw new Error(result.error || "Gagal membuka detail."); setDetail(result.application); }
+    catch (e) { setNotice(e instanceof Error ? e.message : "Gagal membuka detail."); }
+    finally { setDetailBusy(false); }
   }
   async function logout() {
     await fetch("/api/owner/logout", { method: "POST" });
@@ -92,7 +100,7 @@ export default function OwnerPage() {
         {tab==="applications" ? <div style={{overflowX:"auto"}}><table style={{...tableStyle,minWidth:850}}><thead><tr>{["Applicant","TikTok","Followers","Status","Submitted","Actions"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.applications||[]).map(a=><tr key={a.id}>
           <td style={tdStyle}><b>{a.full_name}</b><br/><small style={{color:"#aaa"}}>{a.nickname} · {a.country}</small></td>
           <td style={tdStyle}>@{a.tiktok_username}</td><td style={tdStyle}>{a.follower_count}</td><td style={tdStyle}><span style={{color:gold}}>{a.status}</span></td><td style={tdStyle}>{new Date(a.created_at).toLocaleDateString("id-ID")}</td>
-          <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}>
+          <td style={tdStyle}><div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:230}}><button onClick={()=>showDetail(a.id)} style={actionStyle("#d8b66a")}>Detail</button>
             <button disabled={!!actionId || a.status==="review"} onClick={()=>changeStatus(a.id,"review")} style={actionStyle("#b9a16a")}>{actionId===a.id?"...":"Proses"}</button>
             <button disabled={!!actionId || a.status==="approved"} onClick={()=>changeStatus(a.id,"approved")} style={actionStyle("#78a878")}>Setujui</button>
             <button disabled={!!actionId || a.status==="rejected"} onClick={()=>changeStatus(a.id,"rejected")} style={actionStyle("#b96e67")}>Tolak</button>
@@ -100,6 +108,21 @@ export default function OwnerPage() {
         </tr>)}</tbody></table>{!data?.applications?.length&&<p style={{color:"#999"}}>Belum ada data pendaftar.</p>}</div> :
         <div style={{overflowX:"auto"}}><table style={tableStyle}><thead><tr>{["Member","TikTok","Member No.","Status","Joined"].map(x=><th style={thStyle} key={x}>{x}</th>)}</tr></thead><tbody>{(data?.members||[]).map(m=><tr key={m.id}><td style={tdStyle}>{m.full_name}<br/><small style={{color:"#aaa"}}>{m.nickname}</small></td><td style={tdStyle}>@{m.tiktok_username}</td><td style={tdStyle}>{m.member_number||"—"}</td><td style={tdStyle}>{m.status}</td><td style={tdStyle}>{m.joined_at?new Date(m.joined_at).toLocaleDateString("id-ID"):"—"}</td></tr>)}</tbody></table>{!data?.members?.length&&<p style={{color:"#999"}}>Belum ada member.</p>}</div>}
       </div>
+      {detailBusy&&<p style={{color:gold}}>Memuat detail pendaftar...</p>}
+      {detail&&<div onClick={()=>setDetail(null)} style={{position:"fixed",inset:0,zIndex:60,background:"#000c",display:"grid",placeItems:"center",padding:14}}>
+        <section onClick={e=>e.stopPropagation()} style={{...card,width:"min(100%,620px)",maxHeight:"88vh",overflowY:"auto",boxSizing:"border-box"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><h2 style={{fontFamily:"Georgia,serif",color:gold,fontWeight:500}}>Applicant Details</h2><button onClick={()=>setDetail(null)} style={actionStyle("#d8b66a")}>Tutup ✕</button></div>
+          <h3>{detail.full_name}</h3><p style={{color:"#aaa"}}>{detail.nickname} · {detail.status}</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,fontSize:13}}>
+            {([["Usia",detail.age],["Gender",detail.gender],["Negara",detail.country],["TikTok","@"+detail.tiktok_username],["Followers",Number(detail.follower_count||0).toLocaleString("id-ID")],["Dari",detail.submitted_via],["Konfirmasi identitas",detail.identity_confirmed?"Ya":"Tidak"]] as any[]).map(([k,v])=><div key={k} style={{padding:10,background:"#111",borderRadius:8}}><small style={{color:"#aa986d"}}>{k}</small><div style={{marginTop:5,overflowWrap:"anywhere"}}>{v??"—"}</div></div>)}
+          </div>
+          <p style={{color:"#aa986d",fontSize:12,marginBottom:5}}>Profil TikTok</p><a href={detail.tiktok_profile_url||"#"} target="_blank" rel="noreferrer" style={{color:gold,overflowWrap:"anywhere"}}>{detail.tiktok_profile_url||"Tidak tersedia"}</a>
+          <p style={{color:"#aa986d",fontSize:12,marginBottom:5}}>Alasan bergabung</p><p style={{whiteSpace:"pre-wrap",lineHeight:1.6}}>{detail.reason}</p>
+          <p style={{color:"#aa986d",fontSize:12,marginBottom:5}}>Catatan pemeriksa</p><p>{detail.reviewer_note||"Belum ada catatan."}</p>
+          <p style={{color:"#aa986d",fontSize:12}}>Bukti screenshot</p>{detail.evidence_url?<a href={detail.evidence_url} target="_blank" rel="noreferrer" style={{color:gold}}>Buka bukti (tautan berlaku 5 menit)</a>:<span style={{color:"#999"}}>Belum tersedia</span>}
+          <p style={{color:"#777",fontSize:11}}>Dikirim: {new Date(detail.created_at).toLocaleString("id-ID")}</p>
+        </section>
+      </div>}
       <p style={{color:"#777",fontSize:11,textAlign:"center",marginTop:18}}>ZRS SECURE OWNER SESSION · DATA DITAMPILKAN DARI DATABASE</p>
     </section>
   </main>;
