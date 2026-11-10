@@ -112,3 +112,23 @@ export async function updateApplicationStatus(applicationId: string, status: "re
     body: JSON.stringify({ p_application_id: applicationId, p_status: status, p_reviewer_note: reviewerNote }),
   });
 }
+
+
+export async function getApplicationDetail(applicationId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
+  const rows = await db(`zrs_applications?id=eq.${applicationId}&select=id,full_name,nickname,age,gender,country,tiktok_username,tiktok_profile_url,follower_count,reason,screenshot_path,identity_confirmed,status,reviewer_note,submitted_via,whatsapp_jid,created_at,updated_at,reviewed_at&limit=1`);
+  const app = rows?.[0];
+  if (!app) return null;
+  let evidenceUrl: string | null = null;
+  if (app.screenshot_path) {
+    const signed = await fetch(`${URL}/storage/v1/object/sign/zrs-applicant-evidence/${app.screenshot_path.split("/").map(encodeURIComponent).join("/")}`, {
+      method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 300 }), cache: "no-store",
+    });
+    if (signed.ok) {
+      const payload = await signed.json();
+      evidenceUrl = payload.signedURL?.startsWith("http") ? payload.signedURL : `${URL}/storage/v1${payload.signedURL}`;
+    }
+  }
+  return { ...app, evidence_url: evidenceUrl };
+}
