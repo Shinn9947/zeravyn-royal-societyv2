@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { createApplicantSession } from "../../../../lib/zrs-admin";
+import { consumeLoginAttempt, createApplicantSession } from "../../../../lib/zrs-admin";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
+    if (!(await consumeLoginAttempt(request, "applicant", 10))) {
+      return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." }, { status: 429 });
+    }
     const body = await request.json();
     const id = String(body?.id || "").trim();
     const otp = String(body?.otp || "").trim();
-    if (!/^ZRSA-[A-HJ-NP-Z2-9]{8}$/i.test(id) || !/^\d{6}$/.test(otp)) {
+    if (!/^ZRSA-[A-HJ-NP-Z2-9]{8}$/i.test(id) || !/^\\d{6}$/.test(otp)) {
       return NextResponse.json({ error: "Periksa kembali ID dan OTP." }, { status: 400 });
     }
     const ok = await createApplicantSession(id, otp);
