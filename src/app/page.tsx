@@ -28,7 +28,8 @@ export default function Home() {
   const [data, setData] = useState({name:"",nick:"",age:"",gender:"",country:"Indonesia",username:"",url:"",followers:"",reason:""});
   const [confirmed, setConfirmed] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
-  const [submitting, setSubmitting] = useState(false);\n  const [issuedCredentials, setIssuedCredentials] = useState<{id:string;otp:string}|null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [issuedCredentials, setIssuedCredentials] = useState<{id:string;otp:string}|null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
   const update = (key:string,value:string) => setData(old => ({...old,[key]:value}));
   useEffect(() => {
