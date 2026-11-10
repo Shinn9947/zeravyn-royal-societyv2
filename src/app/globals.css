@@ -23,3 +23,10 @@ button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.65)}
 .ownerApplicantCard:hover{border-color:rgba(228,202,139,.55);box-shadow:0 8px 22px rgba(0,0,0,.2)}
 .ownerApplicantActions button{min-height:40px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+.ownerNavLink{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid rgba(197,164,92,.28);color:#cbb783;font:10px Cinzel;letter-spacing:1.2px}.ownerNavLink:hover{border-color:var(--gold2);color:var(--gold2);background:rgba(197,164,92,.07)}
+@media(max-width:800px){.ownerNavLink{justify-content:center;margin-top:5px}}
+/* Unified ZRS site and private portal interaction language */
+.ownerApplicantCard,.pillars article,.req,.identityCard,.formShell,.step,.ownerApplicantActions button{transition:transform .22s ease,border-color .22s ease,background-color .22s ease,box-shadow .22s ease}
+.pillars article:hover,.req:hover{border-color:rgba(228,202,139,.42);transform:translateY(-2px)}
+.formShell{box-shadow:0 18px 55px rgba(0,0,0,.24)}
