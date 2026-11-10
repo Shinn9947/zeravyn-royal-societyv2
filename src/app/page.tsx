@@ -63,7 +63,7 @@ export default function Home() {
       body.append("full_name", data.name); body.append("nickname", data.nick); body.append("age", data.age);
       body.append("gender", data.gender); body.append("country", data.country); body.append("tiktok_username", data.username);
       body.append("tiktok_profile_url", data.url); body.append("follower_count", data.followers); body.append("reason", data.reason);
-      body.append("identity_confirmed", String(confirmed)); body.append("screenshot", file); body.append("turnstile_token", turnstileToken);
+      body.append("identity_confirmed", String(confirmed)); body.append("evidence", file); body.append("turnstile_token", turnstileToken);
       body.append("website", "");
       const response = await fetch("https://eqrcwyzmnwmayuwzuoae.supabase.co/functions/v1/zrs-submit-application", { method: "POST", body });
       const result = await response.json().catch(() => ({}));
