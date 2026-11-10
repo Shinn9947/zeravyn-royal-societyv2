@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOwnerSession, getOverview } from "@/lib/zrs-admin";
+import { getOwnerSession, getOverview } from "../../../../lib/zrs-admin";
 export const runtime = "nodejs";
 export async function GET() {
   try {
