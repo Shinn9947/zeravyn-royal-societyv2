@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { createOwnerSession } from "../../../../lib/zrs-admin";
+import { consumeLoginAttempt, createOwnerSession } from "../../../../lib/zrs-admin";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
+    if (!(await consumeLoginAttempt(request, "owner", 5))) {
+      return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." }, { status: 429 });
+    }
     const body = await request.json();
     const id = typeof body.id === "string" ? body.id.trim() : "";
     const otp = typeof body.otp === "string" ? body.otp.trim() : "";
