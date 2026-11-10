@@ -30,3 +30,15 @@ button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.65)}
 .ownerApplicantCard,.pillars article,.req,.identityCard,.formShell,.step,.ownerApplicantActions button{transition:transform .22s ease,border-color .22s ease,background-color .22s ease,box-shadow .22s ease}
 .pillars article:hover,.req:hover{border-color:rgba(228,202,139,.42);transform:translateY(-2px)}
 .formShell{box-shadow:0 18px 55px rgba(0,0,0,.24)}
+
+.applicantNavLink{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid rgba(197,164,92,.28);color:#cbb783;font:10px Cinzel;letter-spacing:1.2px}
+.applicantNavLink:hover{border-color:var(--gold2);color:var(--gold2);background:rgba(197,164,92,.07)}
+.credentialReveal{margin-top:18px;padding:20px;border:1px solid rgba(216,182,106,.55);border-radius:12px;background:linear-gradient(145deg,#211c11,#11120f);color:var(--text)}
+.credentialReveal>b{font:600 12px Cinzel;letter-spacing:1.6px;color:var(--gold2)}
+.credentialReveal>p{font-size:12px;color:var(--muted);line-height:1.7}
+.credentialReveal>div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;margin-top:9px;background:#090b0a;border:1px solid var(--line);border-radius:8px}
+.credentialReveal>div span{font:10px Cinzel;letter-spacing:1px;color:#a99669}
+.credentialReveal>div strong{font:600 15px 'DM Sans';letter-spacing:1px;color:#f3e3b6;overflow-wrap:anywhere}
+.credentialReveal button,.credentialReveal>a{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:14px 8px 0 0;padding:11px 13px;border:1px solid var(--gold);background:transparent;color:var(--gold2);font:600 10px Cinzel;letter-spacing:1px}
+.credentialReveal>a{background:var(--gold);color:#17130b}
+@media(max-width:800px){.applicantNavLink{justify-content:center;margin-top:5px}}
