@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-declare global { interface Window { turnstile?: { render: (el: HTMLElement, options: Record<string, unknown>) => string; remove: (id: string) => void }; } }
+declare global { interface Window { turnstile?: { render: (el: HTMLElement, options: Record<string, unknown>) => string; reset: (id: string) => void; remove: (id: string) => void }; } }
 import { Crown, ShieldCheck, Users, Copy, Check, ArrowRight, Menu, X, UploadCloud } from "lucide-react";
 
 const cnOptions = [
@@ -28,16 +28,24 @@ export default function Home() {
   const [data, setData] = useState({name:"",nick:"",age:"",gender:"",country:"Indonesia",username:"",url:"",followers:"",reason:""});
   const [confirmed, setConfirmed] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileWidgetId = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [issuedCredentials, setIssuedCredentials] = useState<{id:string;otp:string}|null>(null);
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
   const update = (key:string,value:string) => setData(old => ({...old,[key]:value}));
   useEffect(() => {
     if (step !== 3 || !siteKey) return;
-    let widgetId = "";
     const mount = () => {
       const el = document.getElementById("zrs-turnstile");
-      if (el && window.turnstile && !widgetId) widgetId = window.turnstile.render(el, { sitekey: siteKey, callback: (token: string) => setTurnstileToken(token), "expired-callback": () => setTurnstileToken(""), "error-callback": () => setTurnstileToken("") });
+      if (el && window.turnstile && !turnstileWidgetId.current) {
+        turnstileWidgetId.current = window.turnstile.render(el, {
+          sitekey: siteKey,
+          action: "signup",
+          callback: (token: string) => setTurnstileToken(token),
+          "expired-callback": () => setTurnstileToken(""),
+          "error-callback": () => setTurnstileToken("")
+        });
+      }
     };
     if (window.turnstile) mount();
     else {
@@ -45,7 +53,7 @@ export default function Home() {
       if (existing) existing.addEventListener("load", mount);
       else { const script = document.createElement("script"); script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"; script.async = true; script.defer = true; script.dataset.zrsTurnstile = "true"; script.onload = mount; document.head.appendChild(script); }
     }
-    return () => { if (widgetId && window.turnstile) window.turnstile.remove(widgetId); setTurnstileToken(""); };
+    return () => { if (turnstileWidgetId.current && window.turnstile) window.turnstile.remove(turnstileWidgetId.current); turnstileWidgetId.current = null; setTurnstileToken(""); };
   }, [step, siteKey]);
   const next = () => {
     if (step===1 && (!data.name || !data.nick || Number(data.age)<13 || !data.gender)) return setNotice("Lengkapi data pribadi. Usia minimum 13 tahun.");
@@ -74,7 +82,11 @@ export default function Home() {
       setNotice("Pengajuan berhasil dikirim! Simpan Applicant ID dan OTP untuk memantau status seleksi.");
       setFile(null); setConfirmed(false); setTurnstileToken("");
     } catch (err) { setNotice(err instanceof Error ? err.message : "Terjadi kesalahan saat mengirim pengajuan."); }
-    finally { setSubmitting(false); }
+    finally {
+      setSubmitting(false);
+      if (turnstileWidgetId.current && window.turnstile) window.turnstile.reset(turnstileWidgetId.current);
+      setTurnstileToken("");
+    }
   };
   const Input = ({label,value,onChange,placeholder,type="text"}:{label:string;value:string;onChange:(v:string)=>void;placeholder:string;type?:string}) => <div className="field"><label>{label}</label><input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></div>;
   return <>
