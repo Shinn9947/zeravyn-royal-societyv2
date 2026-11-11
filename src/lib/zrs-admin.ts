@@ -13,6 +13,21 @@ function safeEqual(a: string, b: string) {
   const right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);
 }
+
+export function isSameOriginMutation(request: Request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+
+  try {
+    const requestOrigin = new globalThis.URL(request.url).origin;
+    if (new globalThis.URL(origin).origin !== requestOrigin) return false;
+  } catch {
+    return false;
+  }
+
+  const fetchSite = request.headers.get("sec-fetch-site");
+  return !fetchSite || fetchSite === "same-origin";
+}
 async function db(path: string, init: RequestInit = {}) {
   if (!KEY) throw new Error("Server database key is not configured.");
   const response = await fetch(`${URL}/rest/v1/${path}`, {
@@ -107,7 +122,7 @@ export async function getOverview() {
 
 
 export async function updateApplicationStatus(applicationId: string, status: "review" | "revision" | "approved" | "rejected", reviewerNote: string | null = null) {
-  if (!/^[0-9a-f-]{36}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
+  if (typeof applicationId !== "string" || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
   return db("rpc/zrs_owner_update_application", {
     method: "POST",
     body: JSON.stringify({ p_application_id: applicationId, p_status: status, p_reviewer_note: reviewerNote }),
@@ -117,7 +132,7 @@ export async function updateApplicationStatus(applicationId: string, status: "re
 
 export async function getApplicationDetail(applicationId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(applicationId)) throw new Error("ID pendaftar tidak valid.");
-  const rows = await db(`zrs_applications?id=eq.${applicationId}&select=id,full_name,nickname,age,gender,country,tiktok_username,tiktok_profile_url,follower_count,reason,screenshot_path,identity_confirmed,status,reviewer_note,submitted_via,whatsapp_jid,created_at,updated_at,reviewed_at&limit=1`);
+  const rows = await db(`zrs_applications?id=eq.${applicationId}&select=id,full_name,nickname,age,gender,country,tiktok_username,tiktok_profile_url,follower_count,reason,screenshot_path,identity_confirmed,status,reviewer_note,submitted_via,created_at&limit=1`);
   const app = rows?.[0];
   if (!app) return null;
   let evidenceUrl: string | null = null;
